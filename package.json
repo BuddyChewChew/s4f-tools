@@ -1,7 +1,7 @@
 {
   "name": "s4f-tools",
   "version": "1.0.0",
-  "description": "Sports4Free playlist & EPG generator",
+  "description": "Sports4Free playlist generator",
   "private": true,
   "type": "module",
   "main": "s4f-scraper.js",
@@ -10,8 +10,7 @@
     "scrape": "node s4f-scraper.js"
   },
   "dependencies": {
-    "cycletls": "^1.0.0",
-    "xmlbuilder2": "^3.1.1"
+    "cycletls": "^1.0.0"
   },
   "engines": {
     "node": ">=18"
