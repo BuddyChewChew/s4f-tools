@@ -8,37 +8,37 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'yarn'  # Cache yarn instead
+          cache: 'npm'
 
-      - name: Install dependencies with yarn
+      - name: Debug: Node & npm versions
         run: |
-          rm -rf node_modules || true
-          yarn install --force --non-interactive --check-files
+          node --version
+          npm --version
+          npm config list
 
-      - name: Run scraper
-        run: node s4f-scraper.js  # Direct call to avoid "start" script issues
-
-      - name: Commit changes if any
+      - name: Clean everything before install
         run: |
-          git config --global user.name "GitHub Action Bot"
+          rm -rf node_modules .npm || true
+          npm cache clean --force
+
+      - name: Install only cycletls
+        run: npm install --no-audit --no-fund --verbose
+
+      - name: Run scraper (with verbose logging)
+        run: npm start -- --verbose
+
+      - name: Commit files if changed
+        run: |
+          git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-
           git add s4f/* || true
-
-          if ! git diff --staged --quiet; then
-            git commit -m "Daily update: $(date +'%Y-%m-%d %H:%M UTC')"
-            git push
-          else
-            echo "No changes detected"
-          fi
+          git diff --staged --quiet || git commit -m "Daily update $(date +'%Y-%m-%d')"
+          git push || echo "No push or skipped"
