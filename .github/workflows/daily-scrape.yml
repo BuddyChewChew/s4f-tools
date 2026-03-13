@@ -1,0 +1,44 @@
+name: Daily Scrape & Update
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Debug: Node & npm versions
+        run: |
+          node --version
+          npm --version
+          npm config list
+
+      - name: Clean everything before install
+        run: |
+          rm -rf node_modules .npm || true
+          npm cache clean --force
+
+      - name: Install only cycletls
+        run: npm install --no-audit --no-fund --verbose
+
+      - name: Run scraper (with verbose logging)
+        run: npm start -- --verbose
+
+      - name: Commit files if changed
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add s4f/* || true
+          git diff --staged --quiet || git commit -m "Daily update $(date +'%Y-%m-%d')"
+          git push || echo "No push or skipped"
