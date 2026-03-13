@@ -2,7 +2,7 @@ name: Daily Scrape & Update
 
 on:
   schedule:
-    - cron: '0 4 * * *'  # Daily ~4 AM UTC
+    - cron: '0 4 * * *'
   workflow_dispatch:
 
 jobs:
@@ -13,36 +13,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for git commit
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: 'yarn'  # Cache yarn instead
 
-      - name: Clean npm environment thoroughly
+      - name: Install dependencies with yarn
         run: |
-          rm -rf node_modules .npm/_cacache/tmp .npm/_cacache/content-v2 || true
-          npm cache clean --force
-
-      - name: Install dependencies (force override conflicts)
-        run: npm install --no-audit --no-fund --force
+          rm -rf node_modules || true
+          yarn install --force --non-interactive --check-files
 
       - name: Run scraper
-        run: npm start
+        run: node s4f-scraper.js  # Direct call to avoid "start" script issues
 
-      - name: Commit and push changes if any
+      - name: Commit changes if any
         run: |
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "action@github.com"
 
           git add s4f/* || true
 
-          # Commit only if actual changes
           if ! git diff --staged --quiet; then
             git commit -m "Daily update: $(date +'%Y-%m-%d %H:%M UTC')"
             git push
           else
-            echo "No new data/changes to commit"
+            echo "No changes detected"
           fi
