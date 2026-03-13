@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import initCycleTLS, { CycleTLSClient } from 'cycletls'; // npm install cycletls
+import initCycleTLS from 'cycletls'; // npm install cycletls
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,16 +21,13 @@ const CONFIG = {
   playlist_file: "s4f_playlist.m3u8",
   us_only_file: "s4f_us_only.m3u8",
   json_file: "s4f_data.json",
-  epg_file: "s4f_epg.xml",
 
-  // CycleTLS impersonate options (JA3/JA4 capable)
   impersonate_options: [
-    "chrome",           // latest chrome
-    "chrome124",        // or specific versions if supported
+    "chrome",
+    "chrome124",
     "chrome131",
     "safari",
     "safari_ios",
-    // add more from CycleTLS docs if needed
   ],
 
   request_timeout: 40000,
@@ -51,12 +48,10 @@ const CONFIG = {
   },
 
   us_keywords: ["US|", "UNITED STATES", "USA"],
-
-  x_tvg_url: "https://raw.githubusercontent.com/YOUR-USERNAME/YOUR-REPO/main/s4f/s4f_epg.xml",
 };
 
 class Sports4FreeScraper {
-  private client: CycleTLSClient | null = null;
+  private client: any = null;
   private proxies: string | undefined = process.env.PROXY_URL;
 
   constructor() {
@@ -66,11 +61,9 @@ class Sports4FreeScraper {
   private async initClient() {
     const chosen = CONFIG.impersonate_options[Math.floor(Math.random() * CONFIG.impersonate_options.length)];
     console.log(`Using impersonate: ${chosen}`);
-    // CycleTLS creates a new instance per impersonation profile
+
     this.client = await initCycleTLS(chosen, {
-      // proxy support
-      proxy: this.proxies ? { host: this.proxies, // format http://ip:port or socks5://...
-      } : undefined,
+      proxy: this.proxies ? { host: this.proxies } : undefined,
       timeout: CONFIG.request_timeout,
     });
   }
@@ -116,7 +109,7 @@ class Sports4FreeScraper {
     try {
       if (CONFIG.groups_url) {
         const groupsResp = await this.fetchWithRetry(CONFIG.groups_url);
-        const groupsData = groupsResp.body; // CycleTLS returns {body, status, headers}
+        const groupsData = groupsResp.body;
         groupMap = Object.fromEntries(
           groupsData
             .filter((g: any) => g?.id)
@@ -136,21 +129,15 @@ class Sports4FreeScraper {
       return false;
     }
 
-    // Sort channels by name
     channels.sort((a, b) => String(a?.name ?? "").toLowerCase().localeCompare(String(b?.name ?? "").toLowerCase()));
 
     const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
     const m3uHeaderParts = [`#EXTM3U m3u-updated="${timestamp}"`];
-    if (CONFIG.x_tvg_url) m3uHeaderParts.push(`x-tvg-url="${CONFIG.x_tvg_url}"`);
     const m3uHeader = m3uHeaderParts.join(" ");
 
     const m3uFull: string[] = [m3uHeader];
     let m3uUs: string[] | null = CONFIG.us_keywords.length > 0 ? [m3uHeader] : null;
-
-    const { create } = await import('xmlbuilder2');
-    const epgRoot = create({ version: '1.0', encoding: 'UTF-8' })
-      .ele('tv');
 
     let processed = 0;
 
@@ -180,10 +167,6 @@ class Sports4FreeScraper {
         m3uUs.push(extinf);
       }
 
-      // Basic EPG
-      epgRoot.ele('channel', { id: chId })
-        .ele('display-name').txt(name).up();
-
       processed++;
     }
 
@@ -209,13 +192,6 @@ class Sports4FreeScraper {
       "utf-8"
     );
 
-    const epgXml = epgRoot.end({ prettyPrint: true });
-    await fs.writeFile(
-      path.join(__dirname, CONFIG.output_dir, CONFIG.epg_file),
-      epgXml,
-      "utf-8"
-    );
-
     console.log(`Success → processed ${processed} channels`);
     return true;
   }
@@ -227,7 +203,7 @@ async function main() {
   if (!success) {
     process.exitCode = 1;
   }
-  // Optional: await scraper.client?.exit(); // if you want to clean up
+  // Optional: await scraper.client?.exit();
 }
 
 main().catch(console.error);
