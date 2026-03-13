@@ -7,10 +7,18 @@ on:
 
 jobs:
   scrape:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04          # ← changed from latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Debug - basic environment check
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -la
+          echo "Node version before setup: $(node --version || echo 'node not found')"
+          echo "npm version before setup: $(npm --version || echo 'npm not found')"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -18,7 +26,7 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Debug: Node & npm versions
+      - name: Debug: Node & npm versions after setup
         run: |
           node --version
           npm --version
@@ -29,11 +37,23 @@ jobs:
           rm -rf node_modules .npm || true
           npm cache clean --force
 
-      - name: Install only cycletls
-        run: npm install --no-audit --no-fund --verbose
+      - name: Install dependencies - maximum debug
+        run: |
+          echo "NPM config before install:"
+          npm config list
+          echo "Cleaning cache again..."
+          npm cache clean --force || true
+          echo "Starting install..."
+          npm install --no-audit --no-fund --verbose --loglevel=verbose || {
+            echo "Install failed - showing cache contents:"
+            ls -la ~/.npm || true
+            echo "Trying plain install..."
+            npm install || true
+            exit 1
+          }
 
-      - name: Run scraper (with verbose logging)
-        run: npm start -- --verbose
+      - name: Run scraper
+        run: npm start
 
       - name: Commit files if changed
         run: |
