@@ -2,46 +2,50 @@ name: Daily Scrape & Update
 
 on:
   schedule:
-    - cron: '0 4 * * *'           # Daily at 4 AM UTC
-  workflow_dispatch:              # Manual run button
+    - cron: '0 4 * * *'  # 4 AM UTC daily
+  workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0            # Full git history for commits
+          fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
 
-      - name: Clean previous installs and cache
+      - name: Aggressive clean before install
         run: |
-          rm -rf node_modules
+          rm -rf node_modules || true
+          rm -rf .npm/_cacache/tmp || true  # clear npm temp dirs if any
           npm cache clean --force
 
       - name: Install dependencies
-        run: npm ci || npm install --no-audit --no-fund
-        # Fallback to npm install if ci fails (e.g. no perfect lockfile)
+        run: |
+          npm install --no-audit --no-fund --force || npm install --no-audit --no-fund
+          # --force helps override rename conflicts in stubborn cases
 
-      - name: Run scraper
+      - name: Run the scraper
         run: npm start
-        # Change to node s4f-scraper.js if your package.json "start" script differs
 
-      - name: Commit updated files if any
+      - name: Commit & push updates (if any)
         run: |
           git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           git add s4f/* || true
           
-          # Commit only if changes exist (avoids errors on no-op)
-          git diff --staged --quiet || git commit -m "Daily update $(date +'%Y-%m-%d %H:%M UTC')"
-          
-          git push || echo "No push needed or skipped"
+          # Check if staged changes exist before commit
+          if ! git diff --staged --quiet; then
+            git commit -m "Daily playlist/EPG/data update - $(date +'%Y-%m-%d %H:%M UTC')"
+            git push
+          else
+            echo "No changes to commit"
+          fi
