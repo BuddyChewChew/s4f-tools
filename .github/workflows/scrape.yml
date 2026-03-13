@@ -1,0 +1,25 @@
+name: Daily Scrape & Update
+
+on:
+  schedule:
+    - cron: '0 4 * * *'    # every day at 4 AM UTC
+  workflow_dispatch:       # manual trigger button
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm start
+      - name: Commit updated files
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add s4f/*
+          git commit -m "Daily playlist update $(date +'%Y-%m-%d')" || echo "No changes"
+          git push
+
