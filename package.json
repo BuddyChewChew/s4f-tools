@@ -6,15 +6,12 @@
   "type": "module",
   "main": "s4f-scraper.js",
   "scripts": {
-    "start": "node s4f-scraper.js",
-    "scrape": "node s4f-scraper.js"
+    "start": "node s4f-scraper.js"
   },
   "dependencies": {
     "cycletls": "^1.0.0"
   },
   "engines": {
     "node": ">=18"
-  },
-  "author": "DNT Designs",
-  "license": "UNLICENSED"
+  }
 }
