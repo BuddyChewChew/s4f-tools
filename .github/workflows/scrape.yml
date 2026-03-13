@@ -1,25 +1,26 @@
-name: Daily Scrape & Update
-
-on:
-  schedule:
-    - cron: '0 4 * * *'    # every day at 4 AM UTC
-  workflow_dispatch:       # manual trigger button
-
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: npm install --no-audit --no-fund   # or just npm install
+          node-version: 22          # upgrade from 20 to avoid future deprecation
+          cache: 'npm'              # caches node_modules + downloaded tarballs
+
+      - name: Clean npm cache & install
+        run: |
+          npm cache clean --force
+          npm ci                      # or npm install if you prefer (but ci is cleaner with lockfile)
+
       - run: npm start
+
       - name: Commit updated files
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add s4f/*
-          git commit -m "Daily playlist update $(date +'%Y-%m-%d')" || echo "No changes"
+          git add s4f/* || true
+          git commit -m "Daily playlist update $(date +'%Y-%m-%d')" || echo "No changes to commit"
           git push
-
