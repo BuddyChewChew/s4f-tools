@@ -2,7 +2,7 @@ name: Daily Scrape & Update
 
 on:
   schedule:
-    - cron: '0 4 * * *'  # 4 AM UTC daily
+    - cron: '0 4 * * *'  # Daily ~4 AM UTC
   workflow_dispatch:
 
 jobs:
@@ -10,42 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Full history for git commit
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
 
-      - name: Aggressive clean before install
+      - name: Clean npm environment thoroughly
         run: |
-          rm -rf node_modules || true
-          rm -rf .npm/_cacache/tmp || true  # clear npm temp dirs if any
+          rm -rf node_modules .npm/_cacache/tmp .npm/_cacache/content-v2 || true
           npm cache clean --force
 
-      - name: Install dependencies
-        run: |
-          npm install --no-audit --no-fund --force || npm install --no-audit --no-fund
-          # --force helps override rename conflicts in stubborn cases
+      - name: Install dependencies (force override conflicts)
+        run: npm install --no-audit --no-fund --force
 
-      - name: Run the scraper
+      - name: Run scraper
         run: npm start
 
-      - name: Commit & push updates (if any)
+      - name: Commit and push changes if any
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+
           git add s4f/* || true
-          
-          # Check if staged changes exist before commit
+
+          # Commit only if actual changes
           if ! git diff --staged --quiet; then
-            git commit -m "Daily playlist/EPG/data update - $(date +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "Daily update: $(date +'%Y-%m-%d %H:%M UTC')"
             git push
           else
-            echo "No changes to commit"
+            echo "No new data/changes to commit"
           fi
