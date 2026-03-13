@@ -1,17 +1,12 @@
 {
   "name": "s4f-tools",
   "version": "1.0.0",
-  "description": "Playlist generator from API",
-  "main": "s4f-scraper.js",
   "type": "module",
   "scripts": {
-    "start": "node s4f-scraper.js",
-    "scrape": "node s4f-scraper.js"
+    "start": "node s4f-scraper.js"
   },
   "dependencies": {
     "cycletls": "^1.0.0",
     "xmlbuilder2": "^3.1.1"
-  },
-  "author": "DNT Designs",
-  "license": "MIT"
+  }
 }
